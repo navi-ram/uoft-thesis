@@ -1,0 +1,19 @@
+$if(has-frontmatter)$
+\frontmatter
+$endif$
+$if(title)$
+\maketitle
+\pagenumbering{roman}
+\setcounter{page}{2}
+$if(abstract)$
+\begin{abstract}
+  \addcontentsline{toc}{chapter}{Abstract}
+$abstract$
+\end{abstract}
+$endif$
+$if(acknowledgements)$
+\begin{acknowledgements}
+$acknowledgements$
+\end{acknowledgements}
+$endif$
+$endif$

@@ -1,0 +1,238 @@
+{{< include preamble.qmd >}}
+
+# Methods
+
+## Participants
+
+Children aged 6-12 years old with a diagnosis of ADHD (n = 186) or autism (n = 67) were randomized in the study (see @tbl-demo). Children on medication were included if they were on a stable dose for the preceding month before training and not concurrently participating in a medication trial. Participants had a diagnosis of ADHD or autism with or without co-occurring ADHD. All other comorbidities were included in both participant groups. Overall inclusion criteria were: (a) 6 to 12 years old; (b) Full Scale Intelligence Quotient (FSIQ) \> 70 on a standardized norm-referenced IQ measure; (c) reliable access to the internet; (d) either diagnosed with ADHD based on Diagnostic Statistical Manual fifth edition [@americanpsychiatricassociation2022] criteria confirmed by responses on the Parent Interview for Child Symptoms (PICS) [@ickowicz2006] or diagnosed with ASD based on the DSM-5 criteria confirmed by ratings on the Autism Diagnostic Observation Schedule – Second Edition (ADOS-2) [@lord2012].
+
+```{r}
+#| label: tbl-demo
+#| tbl-cap: Demographics
+
+
+demo %>%
+  filter(visit == 1) %>%
+  select(age, diagnosis_grp, gender, rand_group, medstatus, adhd_dxtx, asd_dxtx, odd_dxtx, tics_dxtx, ocd_dxtx, schizobpetc_dxtx, other_dxtx, converted_calculated_ss, bl_snap_comb_sum, scq_score) %>%
+  tbl_strata(
+    strata = diagnosis_grp,
+    ~.x %>% 
+      tbl_summary(by = rand_group,
+                  missing = "no",
+                  label = list(age = "Age",
+                               gender = "Gender",
+                               medstatus = "Takes Stimulant Medication",
+                               adhd_dxtx = "ADHD", 
+                               asd_dxtx = "Autism", 
+                               odd_dxtx = "ODD", 
+                               schizobpetc_dxtx = "Anxiety*", 
+                               ocd_dxtx = "OCD", 
+                               tics_dxtx = "Tics", 
+                               converted_calculated_ss = "IQ",
+                               bl_snap_comb_sum = "Baseline ADHD Symptoms", 
+                               scq_score = "Baseline Autism Traits",
+                               other_dxtx = "Other"),
+                  type = where(is.numeric) ~ "continuous",
+                  value = list(medstatus ~ "1", 
+                               adhd_dxtx ~ "1", 
+                               asd_dxtx ~ "1", 
+                               odd_dxtx ~ "1", 
+                               schizobpetc_dxtx ~ "1", 
+                               ocd_dxtx ~ "1", 
+                               tics_dxtx ~ "1", 
+                               other_dxtx ~ "1"),      
+                  statistic = list(
+                    all_continuous() ~ "{mean} ({sd})", 
+                    all_dichotomous() ~ "{n} ({p}%)" 
+                  ))) %>% 
+  modify_footnote(all_stat_cols() ~ NA) %>% 
+  as_kable_extra(format = "latex", escape = F, booktabs = TRUE, linesep = "") %>%
+  kableExtra::footnote(
+    general = "M (SD); n (\\\\%); TAU: Treatment as Usual; ODD: Oppositional Defiant Disorder; OCD: Obsessive Compulstive Disorder; IQ: Intelligence Quotient. ADHD symptoms: SNAP Total score; Autism Traits: SCQ Total score. *p < 0.05 comparing Mega Team versus TAU within the diagnosis group.", 
+    footnote_as_chunk = TRUE, 
+    escape = FALSE, 
+    threeparttable = TRUE) %>% 
+  kable_styling(latex_options = "scale_down")
+
+#https://stackoverflow.com/questions/67490370/how-to-align-table-footnotes-with-kableextra
+
+```
+
+## Measures
+
+**Demographic Medical Questionnaire (DMQ):** On the DMQ caregivers reported on general characteristics of their children, including age, gender, and some medical history and comorbidities. From this measure, **age**, **gender,** and **medication status** were used as predictors in the current study. See [@sec-apxdmq] for complete measure.
+
+**Social Communication Questionnaire - Lifetime (SCQ)**: The SCQ [@rutter2003] is a brief screener for autism traits consisting of 40 yes/no statements that caregivers reported on regarding the child’s entire developmental history. The SCQ can discriminate autism from typical development and has good sensitivity and specificity in school-aged children [@chandler2007]. In this study, the **SCQ Total** score was used.
+
+**Wechsler Abbreviated Scale of Intelligence second edition (WASI-II):** Two subtests (Vocabulary and Matrix Reasoning) of the WASI-II [@wechsler2011] were administered to determine if participants met the inclusion criteria of an estimated minimum 70 Full-Scale Intelligence Quotient (FSIQ). This measure was only administered if there was no recently administered measure (within the last two years) providing an FSIQ or equivalent metric available for the participant. WASI-II is considered a reliable and valid estimate of cognitive ability that converges with scores provided by other more comprehensive measures (e.g., Wechsler Intelligence Scale for Children, fourth edition) [@irby2013].
+
+**Parent Interview for Child Symptoms (PICS):** The PICS is a semi structured interview [@ickowicz2006] which was used to confirm the pre-existing ADHD diagnosis in all ADHD participants based on DSM-5 criteria within prior six months. The interview was administered by a clinician or clinician-trained research staff. The PICS has good reliability and validity [@ickowicz2006].
+
+**Autism Diagnostic Observation Schedule - Second Edition (ADOS-2):** The ADOS-2 [@lord2012] is a semi-structured observational assessment. It was administered by an ADOS-trained clinician to confirm the autism diagnosis in participants who did not have a previous ADOS-2 assessment completed. A systematic review and meta-analysis of the clinical utility of the ADOS-2 showed high specificity and sensitivity in research and clinical settings for ASD evaluation [@lebersfeld2021].
+
+**Stop Signal Task**: The Stop Signal Task measures response inhibition [@logan1997]. This computerized task is composed of one practice block and four assessment blocks which contain 24 trials each. Participants were instructed to make a speeded response to either the X or O stimulus on the screen and withhold their response if the stimulus was preceded by a beep. The Stop Signal Task is made up of go trials and stop trials. Go trials are trials when the participant is expected to make a speeded response. Stop trials are trials when a stop signal (e.g. auditory tone) is presented, and participants are expected to withhold their speeded response. The percentage of stop trials a participant successfully inhibits their response on is referred to as the percent stop inhibition (PSI) and is used in determining validity of administration. **Stop signal reaction time (SSRT)** was calculated as an estimate of the participants’ response inhibition in milliseconds – a faster SSRT indicates better response inhibition. This task was administered at all three assessment visits.
+
+**N-back Task:** The N-back Task measures working memory [@owen2005]. The computerized version of this task used for the current study was a verbal stimulus identification N-back task using letters and 3 levels (0-back, 1-back, and 2-back) were administered. Each level of the task is composed of one practice block and three assessment blocks which contain 40 trials each. Each block is made up of target trials and non-target trials. Target trials are ones in which the stimulus on the screen corresponds with the stimulus seen N trials previously. Non-target trials are ones in which the stimulus on the screen does not match the one seen N trials previously. In a given trial, participants use a key press to indicate if the current stimulus on the screen matched the one presented N trials before (e.g., one trial ago for 1-back). The 0-back task does not measure working memory and participants are required to press one key when a specific stimulus appears on screen and another key for all other stimuli, this task functions as comparison for the more demanding 1-back and 2-back tasks. **Target accuracy** was used as the outcome measure for each level of the N-back to reflect the percentage of target trials correctly responded to. The N-back tasks were administered at all three assessment visits.
+
+**Behaviour Rating Inventory of Executive Function, second edition (BRIEF-2)**: The BRIEF-2 [@gioia2000] measures daily impairments associated with EF deficits. Caregivers rated their child’s behaviour on a 3-point Likert scale from “never” to “often” on 63 statements describing day-to-day use of EF skills. Within the BRIEF, the **Global Executive Composite (GEC)** is the total score computed and was used as a measure of daily EF impairment for the current study. The BRIEF-2 has been used in clinical and research settings and is able to differentiate between typically developing and clinical populations. Additionally, it shows strong internal consistency and moderate to strong internal validity and concurrent validity [@hendrickson2019]. In this study, the BRIEF-2 was administered at all three study timepoints (baseline, 5 weeks post-treatment, and 6 month follow-up).
+
+**Swanson, Nolan and Pelham Questionnaire, fourth edition (SNAP-IV)**: The SNAP-IV; [@swanson1981] measures ADHD symptoms. Caregivers rated their child’s behaviours on a 4-point Likert scale from “not at all” to “very much” on 26 statements describing inattention (9 items), hyperactivity/impulsivity (9 items), and oppositional (8 items) behaviours. The **SNAP total sum** reflects the number and severity of symptoms, with higher scores reflecting greater ADHD symptoms. The SNAP-IV shows acceptable internal consistency and demonstrates parent scores predictive of an ADHD diagnosis for scores above 1.8 on inattention and above 2.4 for hyperactivity/impulsivity [@bussing2008]. The SNAP-IV was administered at baseline, 5 weeks post treatment, and at 6 month follow-up.
+
+**Delis-Kaplan Executive Function System (D-KEFS) Tower Test:** The D-KEFS Tower Task measures planning/organizing ability [@delis2001]. Participants complete up to nine items of increasing difficulty in which they use three to five disks to recreate an image while following specific rules (e.g. without placing a larger disk on a smaller disk, without moving multiple pieces at once). The raw **total achievement score (TAS)** reflects the speed, efficiency, and accuracy of completion and was used as a measure of planning ability for the current study. This task has moderate to high internal consistency and test-retest reliability is moderate for children and youth [@delis2001]. The tower task was administered at all three study visits.
+
+**Woodcock-Johnson III - Fluency Tasks:** The Woodcock-Johnson III Reading Fluency, Math Fluency, and Writing Fluency tasks assess unique aspects of academic fluency [@mcgrew2007]. In the reading fluency task participants quickly read true or false sentences (aloud or silently) for three minutes and receive a point for each correctly read sentence. In the math fluency task participants quickly solve addition, subtraction, and multiplication problems for three minutes and receive a point for each correctly completed problem. In the writing fluency task participants quickly wrote sentences using three target words and received a point for each correctly written complete sentence. A **fluency composite score** was created by combining the standard scores of the three fluency tasks as a measure of overall academic fluency for the current study. The fluency tasks show good to excellent test-retest reliability [@mcgrew2007] and load into a unique fluency factor in factor analysis [@dombrowski2015].
+
+**Time on Task:** Time on task was logged automatically through Mega Team gameplay. When this was unavailable due to technological issues, caregiver report of time on task was collected. Total time on task in minutes was used for the current study.
+
+## Procedure
+
+The current analysis was part of an RCT examining the efficacy of Mega Team training in ADHD children and youth and in ASD children and youth. For a comprehensive description of the procedure and measures, please see the main efficacy paper [@cheungRCT]. Participants were recruited from a community sample via flyers distributed in online parent groups and advocacy organizations (e.g. CHILD-BRIGHT Network). Informed consent was obtained from the caregivers, and assent was obtained from the children at the beginning of the study. Ethics approval was obtained through the SickKids Research Ethics Board. The trial was registered at ClinicalTrials.gov, trial number NCT03502239.
+
+Each study visit was preceded by a 24-hour stimulant medication washout period for participants using stimulant medication (roughly 60% of the ADHD group and 25% of autism group). Demographic information and ratings on the autism screener were collected only during the baseline visit. At all three assessment visits participants completed measures of response inhibition, working memory, planning, and academic fluency and caregivers reported on ADHD symptoms and impairment associated with EF (see @fig-schematic). Participants were randomized into either the treatment group (to play Mega Team for 15 min per day, 5 days per week, for 5 weeks) or the Treatment-As-Usual (TAU) control group (did not play Mega Team). Diagnosis and stimulant medication status were included in the randomization. Participants in the treatment group were trained in how to play the game at the end of the baseline visit, and training was completed at home for five subsequent weeks. Each week, a call was conducted with all participants to collect qualitative information about game play and to provide technical support when needed. The treatment group was asked about Mega Team, and the TAU control group was asked about their typical game play during these calls. After five weeks all participants returned for the post-treatment assessment visit (also known as the 5 week visit) where the treatment group was instructed to discontinue playing. All participants returned for their follow-up assessment visit six months after their baseline visit. At the end of this visit the Mega Team game and training schedule was provided to all participants to use if/as they wished. All cognitive and academic measures were administered by a member of the research team who was blinded to the participant’s randomization.
+
+```{r}
+# #| label: tbl-schedule
+# #| tbl-cap: Schedule of Measures
+# 
+# Measures <- c("DMQ", "SCQ", "WASI-II", "PICS or ADOS-2", "BRIEF-2", "SNAP-IV", "Stop Signal Task", "N-back", "D-KEFS Tower Task", "Woodcock-Johnson III", "Time on Task")
+# Baseline <- c("X","X","X","X","X","X","X","X","X","X","")
+# Treatment <- c("","","","","","","","","","","X")
+# Posttreatment <- c("","","","","X","X","X","X","X","X","")
+# Followup <- c("","","","","X","X","X","X","X","X","")
+# 
+# schedule <- data.frame(Measures, Baseline, Treatment, Posttreatment, Followup)
+# 
+# kbl(schedule, booktabs = TRUE, linesep = "", escape = FALSE, col.names = c("", "Baseline", "During Treatment", linebreak("5 Week Visit \n(post-treatment)"), linebreak("6 Month Visit \n(follow-up)")), align = c("l", "c", "c", "c", "c")) %>% 
+#   kable_styling(latex_options = "scale_down") %>% 
+#   footnote(general = "Time on Task was collected for the treatment-group only; WASI-II administered if FSIQ within last two years was unavailable", 
+#            footnote_as_chunk = TRUE, 
+#            escape = FALSE,
+#            threeparttable = TRUE) 
+
+#flextable(schedule) %>% 
+#  add_footer_lines("Note: ABC was administered to the autism group only; Time on Task was collected for the treatment-group only; WASI-II administered if FSIQ within last two years is unavailable; ADOS-2 administered if not previously administered") %>% 
+#  set_header_labels(values = list(
+#    Treatment = "During Treatment",
+#    Posttreatment = "5 Week Visit \n (post-treatment)", 
+#    Followup = "6 Month Visit \n (follow-up)")) %>% 
+#  theme_apa() %>% 
+#  align(j = 1, align = "left", part = "all") %>% 
+#  line_spacing(space = 1, part = "all") %>% 
+#  autofit()
+
+```
+
+
+![Schedule of Measures](visitschematic.png){#fig-schematic}
+
+
+## Intervention
+
+The Mega Team intervention trains response inhibition and working memory. There are four minigames in Mega Team. Two minigames are played on a laptop and two are played on a tablet. On each device, one game trains response inhibition and the other trains working memory. Ideally the games are collectively played for a total of 15 minutes per day, five days per week, for five weeks, alternating between laptop and tablet minigames with equal time spent on each minigame. The minigames are adaptive so that the difficulty level is adjusted automatically and dynamically to match the participant’s ability while they play to remain appropriately challenging. In the laptop minigames participants play as various superhero characters dodging obstacles and collecting gems to save other members of their superhero team (see [@fig-megateam]). In the tablet minigames participants play the role of a ninja battling different types of robots to beat each level. In the response inhibition minigames participants are asked to intermittently withhold their speeded response when a stop signal is randomly presented and in the working memory minigames participants progress in the game by indicating whether the picture on the screen matches one presented previously. There is one minigame for each skill on the laptop and on the tablet. Participants in the treatment group are instructed to play all four minigames equally during the training period. After the baseline assessment tasks were completed, participants who were randomized to the treatment group were trained on how to play the games. Parents were additionally provided with picture-based instructions for reference and contact information of an unblinded research assistant who could assist them with game-related questions. Participants were incentivized to play daily using a training tracker on which they used stickers to mark the days they played to earn a gift card at their post-treatment visit.
+
+::: {#fig-megateam layout-ncol="2"}
+![Response inhibition training task](actiondash.png)
+
+![Working memory training task](dangerdive.png)
+
+Mega Team games
+:::
+
+## Analysis
+
+Data were screened for validity to check that certain thresholds were met to indicate the task was completed accurately with a minimum proportion of responses. An invalid Stop Signal Task administration contained any of the following: fewer than 36 go trials, fewer than 12 stop trials, PSI less than 0.15 or greater than 0.85, greater than nine non-responses, greater than two pre-pushes on stop trials, SSRT less than 50 milliseconds [see supplemental materials in @schachar2023]. An invalid N-back task contained any of the following: target accuracy greater than non-target accuracy plus twenty-eight, or fewer than five target trials [e.g. @vanderplas2016]. Invalid administration of tasks were excluded. Rates of invalid administrations collapsed across all time points were not significantly different between the treatment and TAU groups. Where multiple valid administrations were collected at one study visit (due to technological issues), the first administration was used to minimize the impact of fatigue on outcomes. Raw scores for measures were used where possible as the current study examined intra-individual change, and normed scores would limit the ability to detect smaller changes.
+
+Analyses were conducted in R [R version 4.4.1; @rcoreteam2024] on a machine using a Windows 11 64-bit operating system. Analyses were run separately on the ADHD and autism diagnosis groups and used an intention to treat principle. To examine the individual factors that predict outcomes after Mega Team training, multiple linear regression analyses were used. The fixed factor was treatment group (either Mega Team or TAU). The outcomes were change scores after 5 weeks and after 6 months on Stop Signal Task SSRT, 1-back target accuracy, 2-back target accuracy, BRIEF-2 GEC, SNAP total sum, Tower Task total achievement score, and an academic fluency composite created from the Woodcock Johnson’s reading, math, and writing fluency standard scores. Means and standard deviations of outcomes are presented in @tbl-adhdoutcomes for the ADHD group and @tbl-asdoutcomes for the autistic group. For the ADHD group, the predictors and moderators tested were age, gender, stimulant medication use, baseline ADHD symptoms, baseline autism traits, baseline response inhibition, baseline working memory, baseline daily EF impairment, and time on task over the course of treatment. In the autism group predictors and moderators tested were baseline ADHD symptoms, baseline autism traits, baseline response inhibition, baseline working memory, and time on task over the course of treatment. The models included interactions by randomization group on the predictors which allowed confirmation that the results specifically reflect significance in response to treatment [@mattes2020]. The default lm function listwise deletion was applied to missing data for complete case analysis which is the most common approach [@bell2014]. All predictors were entered into each linear regression model together for a given outcome to determine significance in the overall model and examine the significance of individual predictors.
+
+Predictor variables were checked for multicollinearity prior to inclusion in the regression models. All baseline variable pairs returned R2 \< 0.8 resulting in a variance inflation factor of less than 5 [@kim2019] confirming no impact of multicollinearity on results. Regression model diagnostics showed all assumptions necessary for linear regression models were met. Diagnostic plots showed linearity of data, normality of residuals, homogeneity of residual variance, and independence of residual error terms in all models.
+
+Significant predictors that displayed a pattern of results that could not be distinguished from a potential regression to the mean were not interpreted as meaningful significant predictors. Given the multiple comparisons, Bonferroni correction was applied to adjust significance threshold to reduce potential for false positives (i.e., Type I error). The corrected significance value for the 14 models for the ADHD group was p \< 0.0035 (0.05/14) and the 6 for the autism group was 0.008 (0.05/6).
+
+```{r}
+#| label: tbl-adhdoutcomes
+#| tbl-cap: ADHD Outcome Measures
+
+outcomes %>%
+  filter(diagnosis_grp == "ADHD") %>% 
+  select(!c(megateam_id, diagnosis_grp)) %>%
+  mutate(visit = factor (case_when(visit == 1 ~ "Baseline", 
+                                   visit == 2 ~ "5 Week Visit", 
+                                   visit == 3 ~ "6 Month Visit"), levels = c("Baseline", "5 Week Visit", "6 Month Visit"))) %>% 
+  tbl_strata(
+    strata = c(visit),
+    ~.x %>%
+      tbl_summary(by = rand_group,
+                  missing = "no",
+                  label = list(itssrt = "SSRT",
+                               target_acc_1 = "1-back Target Accuracy",
+                               target_acc_2 = "2-back Target Accuracy",
+                               raw_GEC = "BRIEF2-GEC",
+                               snap_adhd_comb_sum = "SNAP Total",
+                               tt_raw_score = "Total Achievement Score",
+                               wj_composite = "Fluency Composite"),
+                  type = where(is.numeric) ~ "continuous",
+                  statistic = list(
+                    all_continuous() ~ "{mean} ({sd})"))) %>%
+  modify_footnote(all_stat_cols() ~ NA) %>%
+  as_kable_extra(booktabs = TRUE, linesep = "") %>%
+  footnote(general = "M (SD); TAU: Treatment as Usual; SSRT: Stop Signal Reaction Time, BRIEF2-GEC: BRIEF2 Global Executive Composite",
+           footnote_as_chunk = TRUE,
+           escape = FALSE,
+           threeparttable = TRUE) %>% 
+  kable_styling(latex_options = "scale_down")
+
+
+
+
+# 
+# 
+# tbl_merge(tbls = list(outcomes1, outcomes2), 
+#           tbl_spanner = c("ADHD", "Autism"))
+#   
+# 
+
+#%>% kable_styling(latex_options = "scale_down")
+  
+#  as_flex_table() %>%
+#  add_footer_lines("M (SD); TAU - Treatment as Usual; SSRT - Stop Signal Reaction Time") %>%
+#  theme_apa() %>%
+#  add_header_row(values = c("", "ADHD", "Autism"), colwidths = c(1, 6, 6), top = TRUE) %>%
+#  align(j = 1, align = "left", part = "all") %>%
+#  line_spacing(space = 1, part = "all")
+
+
+
+
+```
+
+```{r}
+#| label: tbl-asdoutcomes
+#| tbl-cap: Autism Outcome Measures
+
+outcomes %>%
+  filter(diagnosis_grp == "Autism") %>% 
+  select(!c(megateam_id, diagnosis_grp, target_acc_2, tt_raw_score, wj_composite, snap_adhd_comb_sum)) %>%
+  mutate(visit = factor (case_when(visit == 1 ~ "Baseline", 
+                                   visit == 2 ~ "5 Week Visit", 
+                                   visit == 3 ~ "6 Month Visit"), levels = c("Baseline", "5 Week Visit", "6 Month Visit"))) %>% 
+  tbl_strata(
+    strata = c(visit),
+    ~.x %>%
+      tbl_summary(by = rand_group,
+                  missing = "no",
+                  label = list(itssrt = "SSRT",
+                               target_acc_1 = "1-back Target Accuracy",
+                               raw_GEC = "BRIEF2-GEC"),
+                  type = where(is.numeric) ~ "continuous",
+                  statistic = list(
+                    all_continuous() ~ "{mean} ({sd})"))) %>%
+  modify_footnote(all_stat_cols() ~ NA) %>%
+  as_kable_extra(booktabs = TRUE, linesep = "") %>%
+  footnote(general = "M (SD); TAU: Treatment as Usual; SSRT: Stop Signal Reaction Time",
+           footnote_as_chunk = TRUE,
+           escape = FALSE,
+           threeparttable = TRUE) %>% 
+  kable_styling(latex_options = "scale_down")
+
+
+```

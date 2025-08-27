@@ -1,0 +1,31 @@
+$if(toc)$
+$if(toc-title)$
+\renewcommand*\contentsname{$toc-title$}
+$endif$
+{
+$if(colorlinks)$
+\hypersetup{linkcolor=$if(toccolor)$$toccolor$$else$$endif$}
+$endif$
+\setcounter{tocdepth}{$toc-depth$}
+\tableofcontents
+}
+$endif$
+\newpage
+$if(lot)$
+\listoftables
+$endif$
+\newpage
+$if(lof)$
+\listoffigures
+$endif$
+\newpage
+
+
+\newcommand{\listappendicesname}{List of Appendices}
+\newlistof{appendices}{apc}{\listappendicesname}
+\newcommand{\appendices}[1]{\addcontentsline{apc}{appendices}{#1}}
+\parindent0mm
+
+\listofappendices
+\addcontentsline{toc}{chapter}{List of Appendices}
+

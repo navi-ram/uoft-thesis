@@ -1,0 +1,85 @@
+project:
+  type: book
+
+execute: 
+  echo: false
+  warning: false
+  message: false
+
+book:
+  title: "What predicts response to Mega Team executive function training in ADHD and autistic children?"
+  author: Navi Ram
+  date: "2025-07-24"
+  chapters:
+    - index.qmd
+  #  - 01_intro.qmd
+    - 02_methods.qmd
+    - 03_results.qmd
+    - 04_discussion.qmd
+    - references.qmd
+  appendices:
+    - dmq.qmd
+    
+    
+crossref:
+  appendix-title: "Appendix"
+  appendix-delim: ":"
+
+
+bibliography: references.bib
+csl: apa.csl
+linkcolor: black
+
+abstract: "Neurodevelopmental disorders like Attention Deficit/Hyperactivity Disorder (ADHD) and autism are associated with a range of real-world difficulties, some of which stem from executive function (EF) impairments. To date, computerized EF training shows improvement in specific skills trained (near transfer) but limited benefits to real-world outcomes (far-transfer) in ADHD and autism. Given that ADHD and autism are highly heterogeneous disorders, exploration of participant level variation in response is warranted to better understand response to treatment. ADHD (n = 186) and autistic (n = 67) participants aged 6 to 12 years old were randomized to receive Mega Team EF training for five weeks or to the treatment as usual (TAU) control group. Participants completed assessments of EF task performance and caregivers rated their behaviours at three times points: baseline, immediately after 5 weeks post treatment, and at 6 month follow-up. In this study, age, gender, baseline EF abilities, baseline clinical characteristics, and time on task were explored using multiple linear regression models with response inhibition, working memory, EF impairment, ADHD symptoms, planning, and academic fluency as outcomes. Results show that baseline EF abilities and time on task are key moderators of response to training for near transfer outcomes in ADHD participants. No factors explored were associated with far transfer outcomes in the ADHD group or with any outcomes in the autism group. Identification of individual factors associated with treatment response has the potential to address heterogeneity in treatment response for children and youth with EF deficits."
+#acknowledgements: just testing out
+
+department: Applied Psychology and Human Development
+gradyear: 2025
+degree: Master of Arts
+fig-cap-location: top
+
+
+header-includes:
+  - \usepackage{pdfpages}
+  - \usepackage{titletoc}
+  - \usepackage{tocloft}
+
+
+filters:
+  - acronyms
+acronyms:
+  fromfile: acronym.yml
+  insert_loa: "beginning"
+  loa_title: "List of Acronyms"
+  loa_header_classes:
+    - unnumbered
+
+#https://cameronpatrick.com/post/2023/07/quarto-thesis-formatting/ if page numbering with roman numerals 
+#ends up being important i can create these templates suggested here
+
+#lastname_firstname_middleinitial(s)_graduationyearmonth_degreedesignator_thesis.pdf
+#e.g., Smith_Lorie_L_201711_PhD_thesis.pdf
+
+#ram_navi_202508_MA_thesis
+
+format:
+  html: default
+  docx: 
+    toc: true
+  pdf:
+    documentclass: ut-thesis
+    template-partials:
+      - title.tex
+      - before-body.tex
+      - toc.tex
+    toc: true
+    toc-depth: 3
+    toc-title: Table of Contents
+    lot: true
+    lof: true
+    number-sections: true
+    keep-tex: true
+    include-in-header: 
+      text: |
+        \usepackage{tocbibind}
+

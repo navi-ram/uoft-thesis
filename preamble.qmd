@@ -1,0 +1,668 @@
+```{r}
+#| label: ADHD-regression-code
+
+library(tidyverse)
+library(flextable)
+#library(tinytex)
+library(gtsummary)
+library(lm.beta)
+library(broom)
+library(effects)
+library(ggplot2)
+library(svglite)
+library(scales)
+library(ggeffects)
+library(corrplot)
+library(quarto)
+library(rmarkdown)
+library(glue)
+library(gt)
+library(kableExtra)
+library(rstatix)
+
+
+MTdat_change <- read_csv("~/thesis/thesis files/data/MTdat_change.csv")
+
+MTdat <- read_csv("~/thesis/thesis files/data/MTdat.csv")
+
+#5094301 assign this pt ADHD in dxtx var based on PICS and randomisation noted as ADHD.
+#5485402 and 5465302 assign this pt ASD in dxtx var based on networkdemo and randomisation marked as ASD. 
+
+MTdat$adhd_dxtx <- ifelse(MTdat$megateam_id == 5094301, 1, MTdat$adhd_dxtx)
+MTdat$asd_dxtx <- ifelse(MTdat$megateam_id %in% c(5465302,5485402), 1, MTdat$asd_dxtx)
+
+#count snap 1-9 for inattentive and 10-18 for hyperactive. speciicaly items rated 2 and 3.
+
+demo <- MTdat %>% 
+  select(megateam_id, visit, rand_group, diagnosis_grp, gender, consent_date, dob, age, medstatus, ends_with("dxtx"), converted_calculated_ss, bl_itssrt, bl_target_acc_1, bl_target_acc_2, bl_raw_GEC, bl_snap_comb_sum, scq_score, overall_total_timeplayed) %>%
+  mutate(gender = case_when(gender == 1 ~ 1,
+                            gender == 2 ~ 2,
+                            gender == 3 ~ 3, 
+                            gender == 4 ~ 3)) %>% 
+  mutate(gender = factor(gender, levels = c(1, 2, 3), labels = c("Cisgender Boy", "Cisgender Girl", "Gender Diverse")),
+         rand_group = factor(rand_group, levels = c(1, 2), labels = c("Mega Team", "TAU")),
+         medstatus = factor(medstatus), 
+         adhd_dxtx = factor(adhd_dxtx), 
+         asd_dxtx = factor(asd_dxtx), 
+         odd_dxtx = factor(odd_dxtx), 
+         schizobpetc_dxtx = factor(schizobpetc_dxtx), 
+         ocd_dxtx = factor(ocd_dxtx), 
+         tics_dxtx = factor(tics_dxtx), 
+         other_dxtx = factor(other_dxtx))
+
+demotbl <- demo %>%
+  filter(visit == 1) %>%
+  select(age, diagnosis_grp, gender, rand_group, medstatus, adhd_dxtx, asd_dxtx, odd_dxtx, tics_dxtx, ocd_dxtx, schizobpetc_dxtx, other_dxtx, converted_calculated_ss, bl_itssrt, bl_target_acc_1, bl_target_acc_2, bl_raw_GEC, bl_snap_comb_sum, scq_score, overall_total_timeplayed) %>%
+  tbl_strata(
+    strata = diagnosis_grp,
+    ~.x %>% 
+      tbl_summary(by = rand_group,
+                  missing = "no",
+                  label = list(medstatus = "Takes Stimulant Medication",
+                               adhd_dxtx = "ADHD", 
+                               asd_dxtx = "Autism", 
+                               odd_dxtx = "ODD", 
+                               schizobpetc_dxtx = "Anxiety", 
+                               ocd_dxtx = "OCD", 
+                               tics_dxtx = "Tics", 
+                               converted_calculated_ss = "IQ",
+                               bl_snap_comb_sum = "Baseline ADHD Symptoms", 
+                               scq_score = "Baseline Autism Symptoms",
+                               other_dxtx = "Other"),
+                  type = where(is.numeric) ~ "continuous",
+                  value = list(medstatus ~ "1", 
+                               adhd_dxtx ~ "1", 
+                               asd_dxtx ~ "1", 
+                               odd_dxtx ~ "1", 
+                               schizobpetc_dxtx ~ "1", 
+                               ocd_dxtx ~ "1", 
+                               tics_dxtx ~ "1", 
+                               other_dxtx ~ "1"),      
+                  statistic = list(
+                    all_continuous() ~ "{mean} ({sd})", 
+                    all_dichotomous() ~ "{n} ({p}%)" 
+                  ))%>% 
+      add_p()) %>% 
+  modify_footnote(all_stat_cols() ~ NA) %>% 
+  #modify_table_styling(columns = label, rows = label %in% c("age", "IQ", "Baseline ADHD Symptoms", "Baseline Autism Symptoms"), footnote = "M (SD)") %>% 
+  #modify_table_styling(columns = label,rows = label %in% c("gender", "Takes Stimulant Medication", "ADHD", "Autism", "ODD", "Anxiety", "OCD", "Tics", "Other"),footnote = "n (%)") %>% 
+  as_flex_table() %>% 
+  add_footer_lines("M (SD); n (%)") %>% 
+  theme_apa() %>% 
+  align(j = 1, align = "left", part = "all") %>% 
+  line_spacing(space = 1, part = "all")
+
+#demotbl
+
+outcomes <- MTdat %>% 
+  select(megateam_id, visit, rand_group, diagnosis_grp, itssrt, target_acc_1, target_acc_2, raw_GEC, snap_adhd_comb_sum, wj_composite, tt_raw_score) %>%
+  mutate(rand_group = factor(rand_group, levels = c(1, 2), labels = c("Mega Team", "TAU")))
+
+
+#open text code the other_dxtx and pull out the LDs
+
+
+#check for group level differences at 5 week breakdown
+
+data_summ <- MTdat_change %>% 
+  filter(time_period == "change1") %>% 
+  mutate(overall_total_timeplayed = if_else(rand_group == 2, 0, overall_total_timeplayed)) %>%
+  mutate(rand_group = case_when(rand_group == 1 ~ "Mega Team", 
+                                rand_group == 2 ~ "Control")) %>% 
+  mutate(rand_group = factor(rand_group))
+
+MTdat_change$time_period <- factor(MTdat_change$time_period, levels = c("change1", "changetotal"))
+
+MTdatch5_adhd <- MTdat_change %>% 
+  filter(diagnosis_grp == "ADHD") %>%
+  filter(time_period == "change1") %>% 
+  mutate(overall_total_timeplayed = if_else(rand_group == 2, 0, overall_total_timeplayed)) %>%
+  mutate(rand_group = case_when(rand_group == 1 ~ 1, 
+                                rand_group == 2 ~ 0)) %>% 
+  mutate(rand_group = factor(rand_group)) %>% 
+  mutate(medstatus = factor(medstatus, levels = c(0,1))) %>% 
+  mutate(gender = case_when(gender == 1 ~ 0, 
+                            gender == 2 ~ 1, 
+                            gender == 3 ~ 2)) %>% 
+  mutate(gender = factor(gender, levels = c(0, 1, 2)))
+
+#print("Stop Task 5 Week improvement")
+
+s5_mod_all <- lm(cs_itssrt ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch5_adhd)
+
+s5_F <- signif(glance(s5_mod_all)$statistic[[1]], 2)
+
+s5_p <- glance(s5_mod_all)$p.value[[1]]
+
+
+s5_r2 <- signif(glance(s5_mod_all)$r.squared[[1]], 2)
+
+s5_beta <- lm.beta(s5_mod_all)
+
+
+#mean(s5_mod_all$residuals)
+
+#shows specific predictor's standardized beta coefficient
+s5_beta_s <- signif(s5_beta$standardized.coefficients[["rand_group1:bl_itssrt"]], 2)
+
+#shows specific predictor's pvalue
+s5_p_s <- signif(summary(s5_mod_all)$coefficients["rand_group1:bl_itssrt",4], 2)
+#summary(s5_mod_all)
+
+#print("BRIEF 5 Week improvement")
+
+b5_mod_all <- lm(cs_GEC ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch5_adhd)
+
+b5_beta <- lm.beta(b5_mod_all)
+
+b5_F <- signif(glance(b5_mod_all)$statistic[[1]], 2)
+
+b5_p <- signif(glance(b5_mod_all)$p.value[[1]], 2)
+
+b5_r2 <- signif(glance(b5_mod_all)$r.squared[[1]], 2)
+
+ 
+#summary(b5_mod_all)
+
+#print("1-back 5 Week improvement")
+
+ob5_mod_all <- lm(cs_targacc1 ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch5_adhd)
+
+ob5_beta <- lm.beta(ob5_mod_all)
+
+ob5_F <- signif(glance(ob5_mod_all)$statistic[[1]], 2)
+
+ob5_p <- signif(glance(ob5_mod_all)$p.value[[1]], 2)
+
+ob5_r2 <- signif(glance(ob5_mod_all)$r.squared[[1]], 2)
+
+
+#shows specific predictor's standardized beta coefficient
+ob5_beta_tp <- signif(ob5_beta$standardized.coefficients[["overall_total_timeplayed"]],2)
+
+#shows specific predictor's pvalue
+ob5_p_tp <- signif(summary(ob5_mod_all)$coefficients["overall_total_timeplayed",4], 2)
+
+#summary(ob5_mod_all)
+
+
+#print("2-back 5 Week improvement")
+
+tb5_mod_all <- lm(cs_targacc2 ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch5_adhd)
+
+tb5_beta <- lm.beta(tb5_mod_all)
+
+tb5_F <- signif(glance(tb5_mod_all)$statistic[[1]], 2)
+
+tb5_p <- signif(glance(tb5_mod_all)$p.value[[1]], 2)
+
+tb5_r2 <- signif(glance(tb5_mod_all)$r.squared[[1]], 2)
+
+
+#summary(tb5_mod_all)
+
+#plot(allEffects(tb6_mod_all))
+
+
+
+#print("SNAP 5 Week improvement")
+
+ad5_mod_all <- lm(cs_snap ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch5_adhd)
+
+ad5_beta <- lm.beta(ad5_mod_all)
+
+ad5_F <- signif(glance(ad5_mod_all)$statistic[[1]], 2)
+
+ad5_p <- signif(glance(ad5_mod_all)$p.value[[1]], 2)
+
+ad5_r2 <- signif(glance(ad5_mod_all)$r.squared[[1]], 2)
+
+#summary(ad5_mod_all)
+
+#print("Tower 5 Week improvement")
+
+t5_mod_all <- lm(cs_tas ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch5_adhd)
+
+t5_beta <- lm.beta(t5_mod_all)
+
+t5_F <- signif(glance(t5_mod_all)$statistic[[1]], 2)
+
+t5_p <- signif(glance(t5_mod_all)$p.value[[1]], 2)
+
+t5_r2 <- signif(glance(t5_mod_all)$r.squared[[1]], 2)
+
+#shows specific predictor's standardized beta coefficient
+t5_beta_ad <- signif(t5_beta[["standardized.coefficients"]][["rand_group1:bl_snap_comb_sum"]],2)
+
+#shows specific predictor's pvalue
+t5_p_ad <- signif(summary(t5_mod_all)[["coefficients"]][["rand_group1:bl_snap_comb_sum",4]], 2)
+
+#shows specific predictor's standardized beta coefficient
+t5_beta_b <- signif(t5_beta[["standardized.coefficients"]][["rand_group1:bl_raw_GEC"]],2)
+
+#shows specific predictor's pvalue
+t5_p_b <- signif(summary(t5_mod_all)[["coefficients"]][["rand_group1:bl_raw_GEC",4]], 2)
+
+#summary(t5_mod_all)
+
+#print("WJ 5 Week improvement")
+
+w5_mod_all <- lm(cs_fluency ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch5_adhd)
+
+w5_beta <- lm.beta(w5_mod_all)
+
+w5_F <- signif(glance(w5_mod_all)$statistic[[1]], 2)
+
+w5_p <- signif(glance(w5_mod_all)$p.value[[1]], 2)
+
+w5_r2 <- signif(glance(w5_mod_all)$r.squared[[1]], 2)
+
+#summary(w5_mod_all)
+
+MTdatch6_adhd <- MTdat_change %>% 
+  filter(diagnosis_grp == "ADHD") %>%
+  filter(time_period == "changetotal") %>% 
+  mutate(overall_total_timeplayed = if_else(rand_group == 2, 0, overall_total_timeplayed)) %>%
+  mutate(rand_group = case_when(rand_group == 1 ~ 1, 
+                                rand_group == 2 ~ 0)) %>% 
+  mutate(rand_group = factor(rand_group)) %>% 
+  mutate(medstatus = factor(medstatus, levels = c(0,1))) %>% 
+  mutate(gender = case_when(gender == 1 ~ 0, 
+                            gender == 2 ~ 1, 
+                            gender == 3 ~ 2)) %>% 
+  mutate(gender = factor(gender, levels = c(0, 1, 2)))
+
+#print("Stop Task 6 month improvement")
+
+s6_mod_all <- lm(cs_itssrt ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch6_adhd)
+
+s6_beta <- lm.beta(s6_mod_all)
+
+s6_F <- signif(glance(s6_mod_all)$statistic[[1]], 2)
+
+s6_p <- signif(glance(s6_mod_all)$p.value[[1]], 2)
+
+s6_r2 <- signif(glance(s6_mod_all)$r.squared[[1]], 2)
+
+#shows specific predictor's standardized beta coefficient
+s6_beta_ob <- signif(s6_beta$standardized.coefficients[["rand_group1:bl_target_acc_1"]], 2)
+
+#shows specific predictor's pvalue
+s6_p_ob <- signif(summary(s6_mod_all)$coefficients["rand_group1:bl_target_acc_1",4], 2)
+
+#summary(s6_mod_all)
+
+#print("BRIEF 6 month improvement")
+
+b6_mod_all <- lm(cs_GEC ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch6_adhd)
+
+b6_beta <- lm.beta(b6_mod_all)
+
+#summary(b6_mod_all)
+
+b6_F <- signif(glance(b6_mod_all)$statistic[[1]], 2)
+
+b6_p <- signif(glance(b6_mod_all)$p.value[[1]], 2)
+
+b6_r2 <- signif(glance(b6_mod_all)$r.squared[[1]], 2)
+
+#print("1-Back 6 month improvement")
+
+ob6_mod_all <- lm(cs_targacc1 ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch6_adhd)
+
+ob6_beta <- lm.beta(ob6_mod_all)
+
+#summary(ob6_mod_all)
+
+ob6_F <- signif(glance(ob6_mod_all)$statistic[[1]], 2)
+
+ob6_p <- signif(glance(ob6_mod_all)$p.value[[1]], 2)
+
+ob6_r2 <- signif(glance(ob6_mod_all)$r.squared[[1]], 2)
+
+#print("2-Back 6 month improvement")
+
+tb6_mod_all <- lm(cs_targacc2 ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch6_adhd)
+
+tb6_beta <- lm.beta(tb6_mod_all)
+
+tb6_F <- signif(glance(tb6_mod_all)$statistic[[1]], 2)
+
+tb6_p <- signif(glance(tb6_mod_all)$p.value[[1]], 2)
+
+tb6_r2 <- signif(glance(tb6_mod_all)$r.squared[[1]], 2)
+
+#summary(tb6_mod_all)
+
+#shows specific predictor's standardized beta coefficient
+tb6_beta_ob <- signif(tb6_beta[["standardized.coefficients"]][["rand_group1:bl_target_acc_1"]],2)
+
+#shows specific predictor's pvalue
+tb6_p_ob <- signif(summary(tb6_mod_all)[["coefficients"]][["rand_group1:bl_target_acc_1",4]], 2)
+
+
+#print("SNAP 6 month improvement")
+
+ad6_mod_all <- lm(cs_snap ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch6_adhd)
+
+ad6_beta <- lm.beta(ad6_mod_all)
+
+ad6_F <- signif(glance(ad6_mod_all)$statistic[[1]], 2)
+
+ad6_p <- signif(glance(ad6_mod_all)$p.value[[1]], 2)
+
+ad6_r2 <- signif(glance(ad6_mod_all)$r.squared[[1]], 2)
+
+#summary(ad6_mod_all)
+
+#print("Tower 6 month improvement")
+
+t6_mod_all <- lm(cs_tas ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch6_adhd)
+
+t6_beta <- lm.beta(t6_mod_all)
+
+#summary(t6_mod_all)
+
+t6_F <- signif(glance(t6_mod_all)$statistic[[1]], 2)
+
+t6_p <- signif(glance(t6_mod_all)$p.value[[1]], 2)
+
+t6_r2 <- signif(glance(t6_mod_all)$r.squared[[1]], 2)
+
+#print("WJ 6 month improvement")
+
+w6_mod_all <- lm(cs_fluency ~ medstatus*rand_group + bl_snap_comb_sum*rand_group + bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_target_acc_2*rand_group + bl_raw_GEC*rand_group + age*rand_group + gender*rand_group + overall_total_timeplayed, MTdatch6_adhd)
+
+w6_beta <- lm.beta(w6_mod_all)
+
+w6_F <- signif(glance(w6_mod_all)$statistic[[1]], 2)
+
+w6_p <- signif(glance(w6_mod_all)$p.value[[1]], 2)
+
+w6_r2 <- signif(glance(w6_mod_all)$r.squared[[1]], 2)
+
+#summary(w6_mod_all)
+
+
+
+#another option to format pvalues https://scriptsandstatistics.wordpress.com/2019/09/22/formating-p-values-a-curated-list-of-r-functions/
+
+pvals <- c(ad5_p, ad6_p, b5_p, b6_p, ob5_p, ob5_p_tp, ob6_p, s5_p, s5_p_s, s6_p, s6_p_ob, t5_p, t5_p_ad, t5_p_b, t6_p, tb5_p, tb6_p, tb6_p_ob, w5_p, w6_p)
+
+pvals <- p_format(pvals, digits = 2, accuracy = 0.001, add.p = TRUE, space = TRUE)
+
+names(pvals) <- c("ad5_p", "ad6_p", "b5_p", "b6_p", "ob5_p", "ob5_p_tp", "ob6_p", "s5_p", "s5_p_s", "s6_p", "s6_p_ob", "t5_p", "t5_p_ad", "t5_p_b", "t6_p", "tb5_p", "tb6_p", "tb6_p_ob", "w5_p", "w6_p")
+
+
+MT_cor <- MTdatch5_adhd %>% 
+  select(!c(megateam_id, rand_group, diagnosis_grp, time_period, ...1)) %>% 
+  mutate(gender = as.numeric(gender), 
+         medstatus = as.numeric(medstatus))
+
+MT_cor <- cor(na.omit(MT_cor))
+test = cor.mtest(MT_cor, conf.level = 0.95)
+
+#corrplot(MT_cor, p.mat = test$p, type = "lower", insig='blank', addCoef.col = "black", col = COL2("PRGn"), number.cex=0.7, tl.col = "black", tl.srt = 45)
+
+
+MT_cor <- MTdatch6_adhd %>% 
+  select(!c(megateam_id, rand_group, diagnosis_grp, time_period, ...1)) %>% 
+  mutate(gender = as.numeric(gender), 
+         medstatus = as.numeric(medstatus))
+MT_cor <- cor(na.omit(MT_cor))
+test = cor.mtest(MT_cor, conf.level = 0.95)
+#corrplot(MT_cor, p.mat = test$p, type = "lower", insig='blank', addCoef.col = "black", col = COL2("PRGn"), number.cex=0.7, tl.col = "black", tl.srt = 45)
+
+
+# summary(ad5_mod_all)
+# plot(allEffects(ad5_mod_all))
+# 
+# summary(ad6_mod_all)
+# plot(allEffects(ad6_mod_all))
+# 
+# summary(b5_mod_all)
+# plot(allEffects(b5_mod_all))
+# 
+# summary(b6_mod_all)
+# plot(allEffects(b6_mod_all))
+# 
+# summary(s5_mod_all)
+# plot(allEffects(s5_mod_all))
+#  
+# summary(s6_mod_all)
+# plot(allEffects(s6_mod_all))
+# 
+# summary(ob5_mod_all)
+# plot(allEffects(ob5_mod_all))
+# 
+# summary(ob6_mod_all)
+# plot(allEffects(ob6_mod_all))
+# 
+# summary(tb5_mod_all)
+# plot(allEffects(tb5_mod_all))
+# summary(tb6_mod_all)
+# plot(allEffects(tb6_mod_all))
+# 
+# summary(t5_mod_all)
+# plot(allEffects(t5_mod_all))
+# 
+# summary(t6_mod_all)
+# plot(allEffects(t6_mod_all))
+# 
+# summary(w5_mod_all)
+# plot(allEffects(w5_mod_all))
+# 
+# summary(w6_mod_all)
+# plot(allEffects(w6_mod_all))
+
+#checking regression assumptions - all pass
+# plot(ad5_mod_all)
+# plot(ad6_mod_all)
+# plot(b5_mod_all)
+# plot(b6_mod_all)
+# plot(s5_mod_all)
+# plot(s6_mod_all)
+# plot(ob5_mod_all)
+# plot(ob6_mod_all)
+# plot(tb5_mod_all)
+# plot(tb6_mod_all)
+# plot(t5_mod_all)
+# plot(t6_mod_all)
+# plot(w5_mod_all)
+# plot(w6_mod_all)
+
+# hist(MTdatch5_adhd$bl_itssrt)
+# hist(MTdatch5_adhd$bl_target_acc_1)
+# hist(MTdatch5_adhd$bl_target_acc_2)
+# 
+# 
+# hist(MTdatch5_asd$bl_itssrt)
+# hist(MTdatch5_asd$bl_target_acc_1)
+# hist(MTdatch5_asd$bl_target_acc_2)
+# 
+# hist(MTdat$bl_itssrt)
+# hist(MTdat$bl_target_acc_1)
+# hist(MTdat$bl_target_acc_2)
+
+# hist(MTdat$scq_score)
+# hist(MTdatch5_asd$bl_scq)
+# hist(MTdatch5_adhd$bl_scq)
+
+```
+
+```{r}
+#| label: ASD-regression-code
+
+MTdatch5_asd <- MTdat_change %>% 
+  filter(diagnosis_grp == "Autism") %>%
+  filter(time_period == "change1") %>% 
+  mutate(overall_total_timeplayed = if_else(rand_group == 2, 0, overall_total_timeplayed)) %>%
+  mutate(rand_group = case_when(rand_group == 1 ~ 1, 
+                                rand_group == 2 ~ 0)) %>% 
+  mutate(rand_group = factor(rand_group)) %>% 
+  mutate(medstatus = factor(medstatus, levels = c(0,1))) %>% 
+  mutate(gender = case_when(gender == 1 ~ 0, 
+                            gender == 2 ~ 1, 
+                            gender == 3 ~ 2)) %>% 
+  mutate(gender = factor(gender, levels = c(0, 1, 2)))
+
+#print("Stop Task 5 Week improvement")
+
+s5_mod_asd <- lm(cs_itssrt ~ bl_scq*rand_group + bl_snap_comb_sum*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + overall_total_timeplayed, MTdatch5_asd)
+
+
+s5_F2 <- signif(glance(s5_mod_asd)$statistic[[1]], 2)
+
+s5_p2 <- signif(glance(s5_mod_asd)$p.value[[1]], 2)
+
+s5_r22 <- signif(glance(s5_mod_asd)$r.squared[[1]], 2)
+
+s5_beta2 <- lm.beta(s5_mod_asd)
+
+#mean(s5_mod_asd$residuals)
+
+#summary(s5_mod_asd)
+
+#shows specific predictor's standardized beta coefficient
+s5_beta_s2 <- signif(s5_beta2$standardized.coefficients[["bl_itssrt"]], 2)
+s5_beta_ad2 <- signif(s5_beta2$standardized.coefficients[["bl_snap_comb_sum"]], 2)
+
+
+#shows specific predictor's pvalue
+s5_p_s2 <- signif(summary(s5_mod_asd)$coefficients["bl_itssrt",4], 2)
+s5_p_ad2 <- signif(summary(s5_mod_asd)$coefficients["bl_snap_comb_sum",4], 2)
+
+
+#summary(s5_mod_asd)
+
+#print("BRIEF 5 Week improvement")
+
+b5_mod_asd <- lm(cs_GEC ~ bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_raw_GEC*rand_group + bl_snap_comb_sum*rand_group + overall_total_timeplayed, MTdatch5_asd)
+
+b5_beta2 <- lm.beta(b5_mod_asd)
+
+b5_F2 <- signif(glance(b5_mod_asd)$statistic[[1]], 2)
+
+b5_p2 <- signif(glance(b5_mod_asd)$p.value[[1]], 2)
+
+b5_r22 <- signif(glance(b5_mod_asd)$r.squared[[1]], 2)
+
+#summary(b5_mod_asd)
+
+#print("1-back 5 Week improvement")
+
+ob5_mod_asd <- lm(cs_targacc1 ~ bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_snap_comb_sum*rand_group + overall_total_timeplayed, MTdatch5_asd)
+
+ob5_beta2 <- lm.beta(ob5_mod_asd)
+
+ob5_F2 <- signif(glance(ob5_mod_asd)$statistic[[1]], 2)
+
+ob5_p2 <- signif(glance(ob5_mod_asd)$p.value[[1]], 2)
+
+ob5_r22 <- signif(glance(ob5_mod_asd)$r.squared[[1]], 2)
+
+#summary(ob5_mod_asd)
+
+
+MTdatch6_asd <- MTdat_change %>% 
+  filter(diagnosis_grp == "Autism") %>%
+  filter(time_period == "changetotal") %>% 
+  mutate(overall_total_timeplayed = if_else(rand_group == 2, 0, overall_total_timeplayed)) %>%
+  mutate(rand_group = case_when(rand_group == 1 ~ 1, 
+                                rand_group == 2 ~ 0)) %>% 
+  mutate(rand_group = factor(rand_group)) %>% 
+  mutate(medstatus = factor(medstatus, levels = c(0,1))) %>% 
+  mutate(gender = case_when(gender == 1 ~ 0, 
+                            gender == 2 ~ 1, 
+                            gender == 3 ~ 2)) %>% 
+  mutate(gender = factor(gender, levels = c(0, 1, 2)))
+
+#print("Stop Task 5 Week improvement")
+
+s6_mod_asd <- lm(cs_itssrt ~ bl_scq*rand_group + bl_snap_comb_sum*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + overall_total_timeplayed, MTdatch6_asd)
+
+
+s6_F2 <- signif(glance(s6_mod_asd)$statistic[[1]], 2)
+
+s6_p2 <- signif(glance(s6_mod_asd)$p.value[[1]], 2)
+
+s6_r22 <- signif(glance(s6_mod_asd)$r.squared[[1]], 2)
+
+s6_beta2 <- lm.beta(s6_mod_asd)
+
+#mean(s5_mod_all$residuals)
+
+#shows specific predictor's standardized beta coefficient
+s6_beta_s2 <- signif(s6_beta2$standardized.coefficients[["bl_itssrt"]], 2)
+
+#shows specific predictor's pvalue
+s6_p_s2 <- signif(summary(s6_mod_asd)$coefficients["bl_itssrt",4], 2)
+
+#summary(s6_mod_asd)
+
+#print("BRIEF 5 Week improvement")
+
+b6_mod_asd <- lm(cs_GEC ~ bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_snap_comb_sum*rand_group + bl_raw_GEC*rand_group + overall_total_timeplayed, MTdatch6_asd)
+
+b6_beta2 <- lm.beta(b6_mod_asd)
+
+b6_F2 <- signif(glance(b6_mod_asd)$statistic[[1]], 2)
+
+b6_p2 <- signif(glance(b6_mod_asd)$p.value[[1]], 2)
+
+b6_r22 <- signif(glance(b6_mod_asd)$r.squared[[1]], 2)
+
+#summary(b6_mod_asd)
+
+#print("1-back 5 Week improvement")
+
+ob6_mod_asd <- lm(cs_targacc1 ~ bl_scq*rand_group + bl_itssrt*rand_group + bl_target_acc_1*rand_group + bl_snap_comb_sum*rand_group + overall_total_timeplayed, MTdatch6_asd)
+
+ob6_beta2 <- lm.beta(ob6_mod_asd)
+
+ob6_F2 <- signif(glance(ob6_mod_asd)$statistic[[1]], 2)
+
+ob6_p2 <- signif(glance(ob6_mod_asd)$p.value[[1]], 2)
+
+ob6_r22 <- signif(glance(ob6_mod_asd)$r.squared[[1]], 2)
+
+#summary(ob6_mod_asd)
+
+
+asd_pvals <- c(b5_p2, b6_p2, ob5_p2, ob6_p2, s5_p2, s6_p2, s5_p_s2, s5_p_ad2, s6_p_s2)
+
+asd_pvals <- p_format(asd_pvals, digits = 2, accuracy = 0.001, add.p = TRUE, space = TRUE)
+
+names(asd_pvals) <- c("b5_p2", "b6_p2", "ob5_p2", "ob6_p2", "s5_p2", "s6_p2", "s5_p_s2", "s5_p_ad2", "s6_p_s2")
+
+
+# summary(s5_mod_all)
+# plot(allEffects(s5_mod_all))
+# 
+# summary(b5_mod_all)
+# plot(allEffects(b5_mod_all))
+# 
+# summary(ob5_mod_all)
+# plot(allEffects(ob5_mod_all))
+# 
+# summary(s6_mod_all)
+# plot(allEffects(s6_mod_all))
+# 
+# summary(b6_mod_all)
+# plot(allEffects(b6_mod_all))
+#
+# summary(ob6_mod_all)
+# plot(allEffects(ob6_mod_all))
+# 
+# summary(tb6_mod_all)
+# plot(allEffects(tb6_mod_all))
+
+#checking assumptions - a few cook's distance for stop were borderline..
+# plot(b5_mod_asd)
+# plot(b6_mod_asd)
+# plot(s5_mod_asd)
+# plot(s6_mod_asd)
+# plot(ob5_mod_asd)
+# plot(ob6_mod_asd)
+
+```
