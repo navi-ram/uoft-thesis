@@ -1,4 +1,0 @@
-\appendices{A Demographic Medical Questionnaire}
-# Demographic Medical Questionnaire {#sec-apxdmq .appendix .unlisted}
-
-\includepdf[pages=1-4, pagecommand={}, scale = 0.85]{apx-dmq.pdf}

@@ -1,0 +1,11 @@
+<!-- this line ensure that your appendix is included in your List of Appendices after your table of contents -->
+
+\appendices{A Questionnaire}
+
+<!-- this line creates a heading above your appendix and makes it crossreferencable -->
+
+# Questionnaire {#sec-apx1 .appendix .unlisted}
+
+<!-- use latex command to select pages from a pdf, scale them down to 85% and then insert them after the appendix header -->
+
+\includepdf[pages=1, pagecommand={}, scale = 0.85]{apx1-snap.pdf}
