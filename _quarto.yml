@@ -7,43 +7,39 @@ execute:
   message: false
 
 book:
-  title: "What predicts response to Mega Team executive function training in ADHD and autistic children?"
+  title: "Working UofT Thesis Reproducible Report Template using Quarto"
   author: Navi Ram
   date: "2025-07-24"
   chapters:
     - index.qmd
-  #  - 01_intro.qmd
     - 02_methods.qmd
     - 03_results.qmd
     - 04_discussion.qmd
     - references.qmd
   appendices:
-    - dmq.qmd
-    
+    - appendix.qmd
     
 crossref:
   appendix-title: "Appendix"
   appendix-delim: ":"
 
-
 bibliography: references.bib
 csl: apa.csl
 linkcolor: black
 
-abstract: "Neurodevelopmental disorders like Attention Deficit/Hyperactivity Disorder (ADHD) and autism are associated with a range of real-world difficulties, some of which stem from executive function (EF) impairments. To date, computerized EF training shows improvement in specific skills trained (near transfer) but limited benefits to real-world outcomes (far-transfer) in ADHD and autism. Given that ADHD and autism are highly heterogeneous disorders, exploration of participant level variation in response is warranted to better understand response to treatment. ADHD (n = 186) and autistic (n = 67) participants aged 6 to 12 years old were randomized to receive Mega Team EF training for five weeks or to the treatment as usual (TAU) control group. Participants completed assessments of EF task performance and caregivers rated their behaviours at three times points: baseline, immediately after 5 weeks post treatment, and at 6 month follow-up. In this study, age, gender, baseline EF abilities, baseline clinical characteristics, and time on task were explored using multiple linear regression models with response inhibition, working memory, EF impairment, ADHD symptoms, planning, and academic fluency as outcomes. Results show that baseline EF abilities and time on task are key moderators of response to training for near transfer outcomes in ADHD participants. No factors explored were associated with far transfer outcomes in the ADHD group or with any outcomes in the autism group. Identification of individual factors associated with treatment response has the potential to address heterogeneity in treatment response for children and youth with EF deficits."
-#acknowledgements: just testing out
+abstract: "This template allows users to create reproducible documents in the required UofT thesis formatting using quarto. This quarto book is written using YAML, R, markdown, and latex syntax. This approach supports integration with citation managers (e.g. Zotero) to manage bibliography and in-text citations, creates cross-referencable figures, tables, and document sections, generates tables and figures using R syntax, dynamically inserts acronyms, and allows integration of text and code. Future updates will introduce APA formatted word doc output options as well."
 
-department: Applied Psychology and Human Development
+acknowledgements: "This would not be possible without the UofT latex template (ut-thesis) maintained by jessexknight and the acronymsdown package by rchaput"
+
+department: Department Name
 gradyear: 2025
-degree: Master of Arts
-fig-cap-location: top
+degree: Degree
 
+fig-cap-location: top
 
 header-includes:
   - \usepackage{pdfpages}
-  - \usepackage{titletoc}
   - \usepackage{tocloft}
-
 
 filters:
   - acronyms
