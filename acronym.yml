@@ -1,5 +1,6 @@
 ---
-# Define your acronyms directly here as shortname and then long name on the next line
+# Define your acronyms directly here as shortname and then long name on the next line. 
+# use \acr{EF} in text to call the long or short name, first time will appear as both Executive Functions (EF), second onward just the acronym EF
 acronyms:
   keys:
     - shortname: ADHD

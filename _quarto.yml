@@ -18,7 +18,7 @@ book:
     - references.qmd
   appendices:
     - appendix.qmd
-    
+
 crossref:
   appendix-title: "Appendix"
   appendix-delim: ":"
@@ -31,15 +31,11 @@ abstract: "This template allows users to create reproducible documents in the re
 
 acknowledgements: "This would not be possible without the UofT latex template (ut-thesis) maintained by jessexknight and the acronymsdown package by rchaput"
 
-department: Department Name
+department: UofT Department Name
 gradyear: 2025
 degree: Degree
 
 fig-cap-location: top
-
-header-includes:
-  - \usepackage{pdfpages}
-  - \usepackage{tocloft}
 
 filters:
   - acronyms
@@ -78,4 +74,6 @@ format:
     include-in-header: 
       text: |
         \usepackage{tocbibind}
+        \usepackage{pdfpages}
+        \usepackage{tocloft}
 

@@ -170,7 +170,7 @@ tbl_merge(
                  linesep = "", 
                  col.names = c("", "$\\beta$", "\\textit{p}", "$\\beta$", "\\textit{p}", "$\\beta$", "\\textit{p}", "$\\beta$", "\\textit{p}", "$\\beta$", "\\textit{p}", "$\\beta$", "\\textit{p}"),
                  align = c("l", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c")) %>%
-  footnote(general = "SSRT: Stop Signal Reaction Time. *\\\\textit{p}-value < 0.0035 (Bonferroni corrected); Bold p-value < 0.05.", 
+  footnote(general = "SSRT: Stop Signal Reaction Time. Bold p-value < 0.05.", 
            footnote_as_chunk = TRUE, 
            escape = FALSE,
            threeparttable = TRUE)  %>% 
@@ -184,5 +184,25 @@ tbl_merge(
 
 ## Autism Group
 
-In the autism group....
+In the autism group....here is a plot. 
+
+
+```{r}
+#| label: fig-scqssrt
+#| fig-cap: SSRT by SCQ in all participants 
+
+
+plotdat <- MTdat %>% 
+   mutate(rand_group = case_when(rand_group == 1 ~ "MegaTeam", 
+                                 rand_group == 0 ~ "Treatment as Usual")) %>% 
+  filter(visit == 1) 
+
+
+ggplot(plotdat, aes(x = scq_score, y = itssrt)) + 
+  geom_smooth(method = "lm", se = TRUE, fullrange = TRUE) +
+  xlab(label = "SCQ Score") + ylab(label = "SSRT (ms)")
+
+
+```
+
 

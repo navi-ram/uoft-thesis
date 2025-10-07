@@ -15,10 +15,12 @@ Children aged 6-12 years old with a diagnosis of ADHD (n = 186) or autism (n = 6
 #| label: tbl-demo
 #| tbl-cap: Demographics
 
+# demo <- demo %>% 
+#   filter(age > 8)
 
 demo %>%
   filter(visit == 1) %>%
-  select(age, diagnosis_grp, gender, rand_group, medstatus, adhd_dxtx, asd_dxtx, odd_dxtx, tics_dxtx, ocd_dxtx, schizobpetc_dxtx, other_dxtx, converted_calculated_ss, bl_snap_comb_sum, scq_score) %>%
+  select(age, diagnosis_grp, gender, rand_group, medstatus, adhd_dxtx, asd_dxtx, odd_dxtx, tics_dxtx, ocd_dxtx, other_dxtx, converted_calculated_ss, bl_snap_comb_sum, scq_score) %>%
   tbl_strata(
     strata = diagnosis_grp,
     ~.x %>% 
@@ -30,7 +32,6 @@ demo %>%
                                adhd_dxtx = "ADHD", 
                                asd_dxtx = "Autism", 
                                odd_dxtx = "ODD", 
-                               schizobpetc_dxtx = "Anxiety*", 
                                ocd_dxtx = "OCD", 
                                tics_dxtx = "Tics", 
                                converted_calculated_ss = "IQ",
@@ -42,7 +43,6 @@ demo %>%
                                adhd_dxtx ~ "1", 
                                asd_dxtx ~ "1", 
                                odd_dxtx ~ "1", 
-                               schizobpetc_dxtx ~ "1", 
                                ocd_dxtx ~ "1", 
                                tics_dxtx ~ "1", 
                                other_dxtx ~ "1"),      
@@ -53,7 +53,7 @@ demo %>%
   modify_footnote(all_stat_cols() ~ NA) %>% 
   as_kable_extra(format = "latex", escape = F, booktabs = TRUE, linesep = "") %>%
   kableExtra::footnote(
-    general = "M (SD); n (\\\\%); TAU: Treatment as Usual; ODD: Oppositional Defiant Disorder; OCD: Obsessive Compulstive Disorder; IQ: Intelligence Quotient. ADHD symptoms: SNAP Total score; Autism Traits: SCQ Total score. *p < 0.05 comparing Mega Team versus TAU within the diagnosis group.", 
+    general = "M (SD); n (\\\\%); TAU: Treatment as Usual; ODD: Oppositional Defiant Disorder; OCD: Obsessive Compulstive Disorder; IQ: Intelligence Quotient. ADHD symptoms: SNAP Total score; Autism Traits: SCQ Total score.", 
     footnote_as_chunk = TRUE, 
     escape = FALSE, 
     threeparttable = TRUE) %>% 
@@ -89,4 +89,4 @@ Mega Team games
 
 ## Analysis
 
-Data were screened for validity...
+Data were screened for validity etc etc
